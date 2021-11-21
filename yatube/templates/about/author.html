@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Об авторе проекта{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row">
+    <aside class="col-12 col-md-3">
+      <img src="{% static 'img/about/Selfie.jpg' %}" width="232" height="232" class="d-inline-block align-top" alt="">
+    </aside>
+    <article class="col-12 col-md-9">
+      <h1>Об авторе:</h1>
+      <p>
+        Привет! Меня зовут Алексей Бормотов. Я живу в России, г. Кемерово.
+        <br>
+        Однажды я уже был программистом и вот настало время снова вернуться
+        в этот прекрасный мир :)
+        <br>
+        Спустя 15 лет работы в строительной сфере я решил, что пора осущетсвить
+        мечту: Стать тем, кем хочется и зарабатывать столько, сколько хочется.
+        <br>
+        <br>
+        Психологическую поддержку мне оказывает моя кошка Нюська, мышка Крыська и
+        кофемашина Бариська! :D Вот они, родимые:
+      </p>
+    </article>
+  </div>
+  <img src="{% static 'img/about/Cat.jpg' %}" width="347" height="464" class="d-inline-block align-top" alt="">
+  <img src="{% static 'img/about/Mouse.jpg' %}" width="347" height="464" class="d-inline-block align-top" alt="">
+  <img src="{% static 'img/about/Coffee.jpg' %}" width="347" height="464" class="d-inline-block align-top" alt="">
+</div>
+{% endblock %}

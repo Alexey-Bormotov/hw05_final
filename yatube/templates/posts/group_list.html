@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% load thumbnail %}
+
+{% block title %}
+  Записи сообщества {{ group }}
+{% endblock %}
+
+{% block content %}
+  <div class="container py-5">
+
+    {% for post in page_obj %}
+      {% if forloop.first %}
+        <h1>{{ post.group }}</h1>
+        <p>{{ post.group.description}} </p>
+      {% endif %}
+      {% include 'posts/includes/single_post.html' %}
+
+      {% if not forloop.last %}<hr>{% endif %}
+    {% endfor %}
+
+    {% include 'posts/includes/paginator.html' %}
+
+    <a href="{% url 'posts:index' %}">На главную</a>
+
+  </div>
+{% endblock %}
