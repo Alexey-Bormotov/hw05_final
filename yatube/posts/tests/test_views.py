@@ -10,7 +10,7 @@ from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django import forms
 
-from ..models import Comment, Following, Group, Post
+from ..models import Comment, Follow, Group, Post
 
 User = get_user_model()
 
@@ -38,11 +38,11 @@ class PostsViewsTests(TestCase):
             slug='test-slug2',
             description='Тестовое описание 2',
         )
-        Following.objects.create(
+        Follow.objects.create(
             user=cls.user,
             author=cls.user_2,
         )
-        Following.objects.create(
+        Follow.objects.create(
             user=cls.user_2,
             author=cls.user,
         )

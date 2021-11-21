@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 
-from ..models import Following, Group, Post
+from ..models import Follow, Group, Post
 
 User = get_user_model()
 
@@ -146,7 +146,7 @@ class PostsURLTests(TestCase):
         self.auth_client_not_author.get(address)
 
         self.assertTrue(
-            Following.objects.filter(
+            Follow.objects.filter(
                 user=user_not_author,
                 author=user,
             ).exists()
@@ -156,7 +156,7 @@ class PostsURLTests(TestCase):
         self.auth_client_not_author.get(address)
 
         self.assertFalse(
-            Following.objects.filter(
+            Follow.objects.filter(
                 user=user_not_author,
                 author=user,
             ).exists()
