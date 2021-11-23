@@ -337,6 +337,27 @@ class PostsViewsTests(TestCase):
 
         self.assertEqual(context_comment, comment)
 
+    def test_following_and_unfollowing_urls(self):
+        """Проверяем возможность подписки и отписки пользователей."""
+        user = PostsViewsTests.user
+        user_not_author = PostsViewsTests.user_2
+
+        following_urls = {
+            f'/profile/{user.username}/follow/': True,
+            f'/profile/{user.username}/unfollow/': False,
+        }
+
+        for address, followed in following_urls.items():
+            with self.subTest(address=address):
+                self.auth_client_2.get(address)
+                self.assertEqual(
+                    Follow.objects.filter(
+                        user=user_not_author,
+                        author=user,
+                    ).exists(),
+                    followed
+                )
+
     def test_index_page_caching(self):
         """Проверка кеширования шаблона index."""
         post = Post.objects.create(
@@ -354,19 +375,26 @@ class PostsViewsTests(TestCase):
         self.assertEqual(response1.content, response2.content)
         self.assertNotEqual(response2.content, response3.content)
 
-    def test_post_correct_appear_at_follow_template(self):
+    def test_post_correct_appear_at_follow_index(self):
         ("""Проверка, что созданный пост появляется на странице избранных"""
-         """авторов у подписчиков и не появляется у тех, кто не подписан.""")
+         """авторов у подписчиков.""")
         post = PostsViewsTests.post
-        not_follower_response = self.auth_client.get(
-            reverse('posts:follow_index')
-        )
-        follower_response = self.auth_client_2.get(
+        response = self.auth_client_2.get(
             reverse('posts:follow_index')
         )
 
-        not_follower_post = not_follower_response.context['page_obj'][0]
-        follower_post = follower_response.context['page_obj'][0]
+        context_post = response.context['page_obj'][0]
 
-        self.assertNotEqual(post, not_follower_post)
-        self.assertEqual(post, follower_post)
+        self.assertEqual(post, context_post)
+
+    def test_post_correct_not_appear_at_follow_index(self):
+        ("""Проверка, что созданный пост не появляется на странице избранных"""
+         """авторов у тех, кто не подписан.""")
+        post = PostsViewsTests.post
+        response = self.auth_client.get(
+            reverse('posts:follow_index')
+        )
+
+        context_post = response.context['page_obj'][0]
+
+        self.assertNotEqual(post, context_post)

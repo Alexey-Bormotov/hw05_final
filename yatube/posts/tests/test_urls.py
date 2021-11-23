@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 
-from ..models import Follow, Group, Post
+from ..models import Group, Post
 
 User = get_user_model()
 
@@ -105,6 +105,27 @@ class PostsURLTests(TestCase):
         )
         self.assertEqual(auth_response.reason_phrase, 'Found')
 
+    def test_following_url_exists_at_desired_location(self):
+        ("""Проверяем доступность подписки и отписки в """
+         """приложении Posts.""")
+        user = PostsURLTests.user
+
+        url_names = [
+            f'/profile/{user.username}/follow/',
+            f'/profile/{user.username}/unfollow/',
+        ]
+
+        for address in url_names:
+            with self.subTest(address=address):
+                guest_response = self.guest_client.get(address, follow=True)
+                auth_response = self.auth_client_not_author.get(address)
+
+                self.assertRedirects(
+                    guest_response,
+                    f'/auth/login/?next={address}'
+                )
+                self.assertEqual(auth_response.reason_phrase, 'Found')
+
     def test_404_error_return_for_unexisting_page(self):
         ("""Проверяем возврат ошибки 404 при запросе к """
          """несуществующей странице.""")
@@ -136,28 +157,3 @@ class PostsURLTests(TestCase):
             with self.subTest(address=address):
                 response = self.auth_client.get(address)
                 self.assertTemplateUsed(response, template)
-
-    def test_following_and_unfollowing_urls(self):
-        """Проверяем возможность подписки и отписки пользователей."""
-        user = PostsURLTests.user
-        user_not_author = PostsURLTests.user_not_author
-
-        address = f'/profile/{user.username}/follow/'
-        self.auth_client_not_author.get(address)
-
-        self.assertTrue(
-            Follow.objects.filter(
-                user=user_not_author,
-                author=user,
-            ).exists()
-        )
-
-        address = f'/profile/{user.username}/unfollow/'
-        self.auth_client_not_author.get(address)
-
-        self.assertFalse(
-            Follow.objects.filter(
-                user=user_not_author,
-                author=user,
-            ).exists()
-        )

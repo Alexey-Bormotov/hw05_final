@@ -144,10 +144,12 @@ def add_comment(request, post_id):
 @login_required
 def follow_index(request):
     template = 'posts/follow.html'
-    fav_authors = request.user.follower.all()
-    fav_authors_list = [fav_author.author for fav_author in fav_authors]
 
-    fav_posts = Post.objects.filter(author__in=fav_authors_list)
+    fav_posts = Post.objects.filter(
+        author__in=[
+            fav_author.author for fav_author in request.user.follower.all()
+        ]
+    )
 
     paginator = Paginator(fav_posts, SHOW_POSTS)
     page_number = request.GET.get('page')
@@ -164,11 +166,7 @@ def profile_follow(request, username):
     author = get_object_or_404(User, username=username)
 
     if request.user != author:
-        if not Follow.objects.filter(
-            user=request.user,
-            author=author
-        ).exists():
-            Follow.objects.create(user=request.user, author=author)
+        Follow.objects.get_or_create(user=request.user, author=author)
 
     return redirect('posts:profile', username=username)
 
@@ -176,6 +174,6 @@ def profile_follow(request, username):
 @login_required
 def profile_unfollow(request, username):
     author = get_object_or_404(User, username=username)
-    Follow.objects.get(user=request.user, author=author).delete()
+    Follow.objects.filter(user=request.user, author=author).delete()
 
     return redirect('posts:profile', username=username)
