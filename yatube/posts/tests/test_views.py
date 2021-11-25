@@ -38,20 +38,6 @@ class PostsViewsTests(TestCase):
             slug='test-slug2',
             description='Тестовое описание 2',
         )
-        Follow.objects.create(
-            user=cls.user,
-            author=cls.user_2,
-        )
-        Follow.objects.create(
-            user=cls.user_2,
-            author=cls.user,
-        )
-
-        cls.post_2 = Post.objects.create(
-            author=cls.user_2,
-            group=cls.group,
-            text='Тестовый пост для проверки подписки',
-        )
 
         for i in range(12):
             Post.objects.create(
@@ -95,6 +81,7 @@ class PostsViewsTests(TestCase):
         shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
     def setUp(self):
+        self.guest_client = Client()
         self.auth_client = Client()
         self.auth_client_2 = Client()
 
@@ -263,7 +250,7 @@ class PostsViewsTests(TestCase):
             with self.subTest(value=value):
                 form_field = response.context.get('form').fields.get(value)
                 self.assertIsInstance(form_field, expected)
-        self.assertEqual(context_post_id, 14)
+        self.assertEqual(context_post_id, 13)
 
     def test_posts_pages_correct_paginator_work(self):
         """Проверка работы паджинатора в шаблонах приложения Posts."""
@@ -272,7 +259,7 @@ class PostsViewsTests(TestCase):
         PAGE_1_POSTS = 10
 
         urls_page2posts_names = {
-            reverse('posts:index'): 4,
+            reverse('posts:index'): 3,
             reverse('posts:group_posts', kwargs={'slug': group.slug}): 2,
             reverse('posts:profile', kwargs={'username': user.username}): 3,
         }
@@ -337,26 +324,67 @@ class PostsViewsTests(TestCase):
 
         self.assertEqual(context_comment, comment)
 
-    def test_following_and_unfollowing_urls(self):
-        """Проверяем возможность подписки и отписки пользователей."""
+    def test_guest_cant_create_comment(self):
+        """Проверка, что гость не может создать комментарий."""
+        post = PostsViewsTests.post
+
+        response = self.guest_client.post(
+            reverse('posts:add_comment', kwargs={'post_id': post.pk}),
+            follow=True
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('users:login') + f'?next=/posts/{post.pk}/comment/'
+        )
+
+    def test_users_correct_following(self):
+        """Проверяем возможность подписки пользователей на авторов."""
         user = PostsViewsTests.user
         user_not_author = PostsViewsTests.user_2
+        address = f'/profile/{user.username}/follow/'
 
-        following_urls = {
-            f'/profile/{user.username}/follow/': True,
-            f'/profile/{user.username}/unfollow/': False,
-        }
+        self.assertFalse(
+            Follow.objects.filter(
+                user=user_not_author,
+                author=user,
+            ).exists(),
+        )
 
-        for address, followed in following_urls.items():
-            with self.subTest(address=address):
-                self.auth_client_2.get(address)
-                self.assertEqual(
-                    Follow.objects.filter(
-                        user=user_not_author,
-                        author=user,
-                    ).exists(),
-                    followed
-                )
+        self.auth_client_2.get(address)
+
+        self.assertTrue(
+            Follow.objects.filter(
+                user=user_not_author,
+                author=user,
+            ).exists(),
+        )
+
+    def test_users_correct_unfollowing(self):
+        """Проверяем возможность отписки пользователей от авторов."""
+        user = PostsViewsTests.user
+        user_not_author = PostsViewsTests.user_2
+        address = f'/profile/{user.username}/unfollow/'
+        Follow.objects.create(
+            user=self.user_2,
+            author=self.user,
+        )
+
+        self.assertTrue(
+            Follow.objects.filter(
+                user=user_not_author,
+                author=user,
+            ).exists(),
+        )
+
+        self.auth_client_2.get(address)
+
+        self.assertFalse(
+            Follow.objects.filter(
+                user=user_not_author,
+                author=user,
+            ).exists(),
+        )
 
     def test_index_page_caching(self):
         """Проверка кеширования шаблона index."""
@@ -376,9 +404,14 @@ class PostsViewsTests(TestCase):
         self.assertNotEqual(response2.content, response3.content)
 
     def test_post_correct_appear_at_follow_index(self):
-        ("""Проверка, что созданный пост появляется на странице избранных"""
+        ("""Проверка, что созданный пост появляется на странице избранных """
          """авторов у подписчиков.""")
         post = PostsViewsTests.post
+        Follow.objects.create(
+            user=self.user_2,
+            author=self.user,
+        )
+
         response = self.auth_client_2.get(
             reverse('posts:follow_index')
         )
@@ -395,6 +428,6 @@ class PostsViewsTests(TestCase):
             reverse('posts:follow_index')
         )
 
-        context_post = response.context['page_obj'][0]
+        context_posts = response.context['page_obj']
 
-        self.assertNotEqual(post, context_post)
+        self.assertNotIn(post, context_posts)

@@ -105,9 +105,9 @@ class PostsURLTests(TestCase):
         )
         self.assertEqual(auth_response.reason_phrase, 'Found')
 
-    def test_following_url_exists_at_desired_location(self):
-        ("""Проверяем доступность подписки и отписки в """
-         """приложении Posts.""")
+    def test_following_urls_for_guest(self):
+        ("""Проверяем недоступность подписки и отписки в """
+         """приложении Posts для гостя.""")
         user = PostsURLTests.user
 
         url_names = [
@@ -118,24 +118,42 @@ class PostsURLTests(TestCase):
         for address in url_names:
             with self.subTest(address=address):
                 guest_response = self.guest_client.get(address, follow=True)
-                auth_response = self.auth_client_not_author.get(address)
 
                 self.assertRedirects(
                     guest_response,
                     f'/auth/login/?next={address}'
                 )
-                self.assertEqual(auth_response.reason_phrase, 'Found')
+
+    def test_following_urls_for_auth_user(self):
+        ("""Проверяем доступность подписки и отписки в """
+         """приложении Posts для авторизованного пользователя.""")
+        user = PostsURLTests.user
+
+        url_names = [
+            f'/profile/{user.username}/follow/',
+            f'/profile/{user.username}/unfollow/',
+        ]
+
+        for address in url_names:
+            with self.subTest(address=address):
+                auth_response = self.auth_client_not_author.get(address)
+
+                self.assertEqual(auth_response.status_code, 302)
 
     def test_404_error_return_for_unexisting_page(self):
         ("""Проверяем возврат ошибки 404 при запросе к """
          """несуществующей странице.""")
         address = f'{"/fake_page/"}'
 
-        guest_response = self.guest_client.get(address, follow=True)
-        auth_response = self.auth_client.get(address)
+        users_requests = [
+            self.guest_client.get(address),
+            self.auth_client.get(address),
+        ]
 
-        self.assertEqual(guest_response.reason_phrase, 'Not Found')
-        self.assertEqual(auth_response.reason_phrase, 'Not Found')
+        for request in users_requests:
+            with self.subTest(request=request):
+
+                self.assertEqual(request.reason_phrase, 'Not Found')
 
     def test_urls_uses_correct_template(self):
         """Проверяем шаблоны приложения Posts."""

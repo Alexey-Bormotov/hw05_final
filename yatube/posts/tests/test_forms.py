@@ -110,7 +110,7 @@ class PostsFormsTests(TestCase):
             TEST_POST_TEXT_2
         )
 
-    def test_posts_create_comment(self):
+    def test_posts_user_creates_comment(self):
         """Валидная форма создает комментарий в Comment."""
         form_data = {
             'text': TEST_COMMENT_TEXT,
