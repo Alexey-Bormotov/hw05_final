@@ -104,3 +104,6 @@ class Follow(models.Model):
                 name='unique_following'
             )
         ]
+
+    def __str__(self):
+        return f'Подписка {self.user} на {self.author}'
