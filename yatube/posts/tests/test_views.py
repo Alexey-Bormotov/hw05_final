@@ -327,22 +327,25 @@ class PostsViewsTests(TestCase):
     def test_guest_cant_create_comment(self):
         """Проверка, что гость не может создать комментарий."""
         post = PostsViewsTests.post
+        comments_count = Comment.objects.count()
+        address = reverse('posts:add_comment', kwargs={'post_id': post.pk})
 
-        response = self.guest_client.post(
-            reverse('posts:add_comment', kwargs={'post_id': post.pk}),
-            follow=True
-        )
+        response = self.guest_client.post(address, follow=True)
 
         self.assertRedirects(
             response,
-            reverse('users:login') + f'?next=/posts/{post.pk}/comment/'
+            reverse('users:login') + '?next=' + address
         )
+        self.assertEqual(Comment.objects.count(), comments_count)
 
     def test_users_correct_following(self):
         """Проверяем возможность подписки пользователей на авторов."""
         user = PostsViewsTests.user
         user_not_author = PostsViewsTests.user_2
-        address = f'/profile/{user.username}/follow/'
+        address = reverse(
+            'posts:profile_follow',
+            kwargs={'username': user.username}
+        )
 
         self.assertFalse(
             Follow.objects.filter(
@@ -364,7 +367,10 @@ class PostsViewsTests(TestCase):
         """Проверяем возможность отписки пользователей от авторов."""
         user = PostsViewsTests.user
         user_not_author = PostsViewsTests.user_2
-        address = f'/profile/{user.username}/unfollow/'
+        address = reverse(
+            'posts:profile_unfollow',
+            kwargs={'username': user.username}
+        )
         Follow.objects.create(
             user=self.user_2,
             author=self.user,
