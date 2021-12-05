@@ -1,11 +1,9 @@
-from django.test import Client, TestCase
 from django.urls import reverse
 
+from . import about_tests_setup as setup
 
-class AboutViewsTests(TestCase):
-    def setUp(self):
-        self.guest_client = Client()
 
+class AboutViewsTests(setup.AboutTestsSetup):
     def test_about_names_exists_at_desired_locations(self):
         """Проверяем доступность страниц по app:name приложения About."""
 

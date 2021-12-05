@@ -1,21 +1,7 @@
-from django.contrib.auth import get_user_model
-from django.test import Client, TestCase
-
-User = get_user_model()
+from . import users_tests_setup as setup
 
 
-class UsersURLTests(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.user = User.objects.create_user(username='test_user')
-
-    def setUp(self):
-        self.guest_client = Client()
-        self.auth_client = Client()
-
-        self.auth_client.force_login(UsersURLTests.user)
-
+class UsersURLTests(setup.UsersTestsSetup):
     def test_urls_exists_at_desired_location(self):
         """Проверяем доступность страниц приложения Users."""
 

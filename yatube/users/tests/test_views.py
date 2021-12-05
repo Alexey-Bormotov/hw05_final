@@ -1,22 +1,10 @@
-from django.contrib.auth import get_user_model
-from django.test import Client, TestCase
 from django.urls import reverse
 from django import forms
 
-User = get_user_model()
+from . import users_tests_setup as setup
 
 
-class UsersViewsTests(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.user = User.objects.create_user(username='test_user')
-
-    def setUp(self):
-        self.auth_client = Client()
-
-        self.auth_client.force_login(UsersViewsTests.user)
-
+class UsersViewsTests(setup.UsersTestsSetup):
     def test_users_pages_uses_correct_templates(self):
         """URL-адреса используют соответствующие шаблоны в приложении Users."""
 

@@ -1,10 +1,7 @@
-from django.test import Client, TestCase
+from . import about_tests_setup as setup
 
 
-class AboutURLTests(TestCase):
-    def setUp(self):
-        self.guest_client = Client()
-
+class AboutURLTests(setup.AboutTestsSetup):
     def test_about_urls_exists_at_desired_locations(self):
         """Проверяем доступность страниц по URL приложения About."""
 

@@ -1,52 +1,21 @@
-import shutil
-import tempfile
-
-from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.contrib.auth import get_user_model
-from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from ..models import Comment, Group, Post
+from ..models import Comment, Post
+from . import posts_tests_setup as setup
 
 User = get_user_model()
 
-TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 TEST_POST_TEXT = 'Тестовый пост'
 TEST_POST_TEXT_2 = 'Изменённый тестовый пост'
 TEST_COMMENT_TEXT = 'Тестовый комментарий к посту'
 
 
-@override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
-class PostsFormsTests(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.user = User.objects.create_user(username='test_user')
-        cls.group = Group.objects.create(
-            title='Тестовая группа',
-            slug='test-slug',
-            description='Тестовое описание',
-        )
-
-        cls.post = Post.objects.create(
-            author=cls.user,
-            group=cls.group,
-            text='Тестовый пост тестового пользователя в тестовой группе',
-        )
-
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
-
-    def setUp(self):
-        self.auth_client = Client()
-
-        self.auth_client.force_login(PostsFormsTests.user)
-
+class PostsFormsTests(setup.PostsTestsSetup):
     def test_posts_create_post(self):
         """Валидная форма создает запись в Post."""
+
         posts_count = Post.objects.count()
 
         small_gif = (
@@ -91,6 +60,7 @@ class PostsFormsTests(TestCase):
 
     def test_posts_edit_post(self):
         """Валидная форма редактирует запись в Post."""
+
         posts_count = Post.objects.count()
 
         form_data = {
@@ -112,6 +82,9 @@ class PostsFormsTests(TestCase):
 
     def test_posts_user_creates_comment(self):
         """Валидная форма создает комментарий в Comment."""
+
+        comments_count = Comment.objects.count()
+
         form_data = {
             'text': TEST_COMMENT_TEXT,
         }
@@ -126,7 +99,7 @@ class PostsFormsTests(TestCase):
             response,
             reverse('posts:post_detail', kwargs={'post_id': self.post.pk})
         )
-        self.assertEqual(Comment.objects.count(), 1)
+        self.assertEqual(Comment.objects.count(), comments_count + 1)
         self.assertTrue(
             Comment.objects.filter(text=TEST_COMMENT_TEXT).exists()
         )

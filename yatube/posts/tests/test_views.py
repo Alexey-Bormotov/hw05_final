@@ -1,45 +1,31 @@
-import shutil
-import tempfile
 from time import sleep
 
 from django.core.cache import cache
-from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.contrib.auth import get_user_model
-from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django import forms
 
 from ..models import Comment, Follow, Group, Post
+from . import posts_tests_setup as setup
 
 User = get_user_model()
 
-TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 TEST_POST_TEXT = 'Тестовый пост №13 тестового пользователя в тестовой группе'
 TEST_COMMENT_TEXT = 'Тестовый комментарий к посту'
 
 
-@override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
-class PostsViewsTests(TestCase):
+class PostsViewsTests(setup.PostsTestsSetup):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.user = User.objects.create_user(username='test_user')
-        cls.user_2 = User.objects.create_user(
-            username='test_user_2'
-        )
-        cls.group = Group.objects.create(
-            title='Тестовая группа',
-            slug='test-slug',
-            description='Тестовое описание',
-        )
         cls.group2 = Group.objects.create(
             title='Тестовая группа 2',
             slug='test-slug2',
             description='Тестовое описание 2',
         )
 
-        for i in range(12):
+        for i in range(11):
             Post.objects.create(
                 author=cls.user,
                 group=cls.group2,
@@ -75,43 +61,27 @@ class PostsViewsTests(TestCase):
             text=TEST_COMMENT_TEXT,
         )
 
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
-
-    def setUp(self):
-        self.guest_client = Client()
-        self.auth_client = Client()
-        self.auth_client_2 = Client()
-
-        self.auth_client.force_login(PostsViewsTests.user)
-        self.auth_client_2.force_login(PostsViewsTests.user_2)
-
     def test_posts_urls_uses_correct_templates(self):
         """URL-адреса используют соответствующие шаблоны в приложении Posts."""
-        group = PostsViewsTests.group
-        user = PostsViewsTests.user
-        post = PostsViewsTests.post
 
         urls_templates_names = {
             reverse('posts:index'): 'posts/index.html',
             reverse(
                 'posts:group_posts',
-                kwargs={'slug': group.slug}
+                kwargs={'slug': self.group.slug}
             ): 'posts/group_list.html',
             reverse(
                 'posts:profile',
-                kwargs={'username': user.username}
+                kwargs={'username': self.user.username}
             ): 'posts/profile.html',
             reverse(
                 'posts:post_detail',
-                kwargs={'post_id': post.pk}
+                kwargs={'post_id': self.post.pk}
             ): 'posts/post_detail.html',
             reverse('posts:post_create'): 'posts/create_post.html',
             reverse(
                 'posts:post_edit',
-                kwargs={'post_id': post.pk}
+                kwargs={'post_id': self.post.pk}
             ): 'posts/create_post.html',
             reverse('posts:follow_index'): 'posts/follow.html',
         }
@@ -123,12 +93,14 @@ class PostsViewsTests(TestCase):
 
     def test_404_error_uses_correct_custom_template(self):
         """Страница с ошибкой 404 отдаёт кастомный шаблон."""
+
         response = self.auth_client.get('/fake_page/')
 
         self.assertTemplateUsed(response, 'core/404.html')
 
     def test_index_page_show_correct_context(self):
         """Шаблон index сформирован с правильным контекстом."""
+
         response = self.auth_client.get(reverse('posts:index'))
 
         context_post = response.context['page_obj'][0]
@@ -147,9 +119,9 @@ class PostsViewsTests(TestCase):
 
     def test_group_posts_page_show_correct_context(self):
         """Шаблон group_list сформирован с правильным контекстом."""
-        group = PostsViewsTests.group
+
         response = self.auth_client.get(
-            reverse('posts:group_posts', kwargs={'slug': group.slug})
+            reverse('posts:group_posts', kwargs={'slug': self.group.slug})
         )
 
         context_post = response.context['page_obj'][0]
@@ -170,10 +142,11 @@ class PostsViewsTests(TestCase):
 
     def test_profile_page_show_correct_context(self):
         """Шаблон profile сформирован с правильным контекстом."""
-        user = PostsViewsTests.user
-        posts_count = user.posts.count()
+
+        posts_count = self.user.posts.count()
+
         response = self.auth_client.get(
-            reverse('posts:profile', kwargs={'username': user.username})
+            reverse('posts:profile', kwargs={'username': self.user.username})
         )
 
         context_post = response.context['page_obj'][0]
@@ -196,11 +169,11 @@ class PostsViewsTests(TestCase):
 
     def test_post_detail_page_show_correct_context(self):
         """Шаблон post_detail сформирован с правильным контекстом."""
-        user = PostsViewsTests.user
-        posts_count = user.posts.count()
-        post = PostsViewsTests.post
+
+        posts_count = self.user.posts.count()
+
         response = self.auth_client.get(
-            reverse('posts:post_detail', kwargs={'post_id': post.pk})
+            reverse('posts:post_detail', kwargs={'post_id': self.post.pk})
         )
 
         context_post = response.context['post']
@@ -221,6 +194,7 @@ class PostsViewsTests(TestCase):
 
     def test_post_create_show_correct_context(self):
         """Шаблон create_post (create) сформирован с правильным контекстом."""
+
         response = self.auth_client.get(reverse('posts:post_create'))
 
         form_fields = {
@@ -235,9 +209,9 @@ class PostsViewsTests(TestCase):
 
     def test_post_edit_page_show_correct_context(self):
         """Шаблон create_post (edit) сформирован с правильным контекстом."""
-        post = PostsViewsTests.post
+
         response = self.auth_client.get(
-            reverse('posts:post_edit', kwargs={'post_id': post.pk})
+            reverse('posts:post_edit', kwargs={'post_id': self.post.pk})
         )
 
         form_fields = {
@@ -254,14 +228,16 @@ class PostsViewsTests(TestCase):
 
     def test_posts_pages_correct_paginator_work(self):
         """Проверка работы паджинатора в шаблонах приложения Posts."""
-        group = PostsViewsTests.group2
-        user = PostsViewsTests.user
+
         PAGE_1_POSTS = 10
 
         urls_page2posts_names = {
             reverse('posts:index'): 3,
-            reverse('posts:group_posts', kwargs={'slug': group.slug}): 2,
-            reverse('posts:profile', kwargs={'username': user.username}): 3,
+            reverse('posts:group_posts', kwargs={'slug': self.group2.slug}): 1,
+            reverse(
+                'posts:profile',
+                kwargs={'username': self.user.username}
+            ): 3,
         }
 
         for page, page_2_posts in urls_page2posts_names.items():
@@ -281,14 +257,11 @@ class PostsViewsTests(TestCase):
     def test_post_correct_appear(self):
         ("""Проверка, что созданный пост появляется на """
          """нужных страницах.""")
-        group = PostsViewsTests.group
-        user = PostsViewsTests.user
-        post = PostsViewsTests.post
 
         pages_names = [
             reverse('posts:index'),
-            reverse('posts:group_posts', kwargs={'slug': group.slug}),
-            reverse('posts:profile', kwargs={'username': user.username}),
+            reverse('posts:group_posts', kwargs={'slug': self.group.slug}),
+            reverse('posts:profile', kwargs={'username': self.user.username}),
         ]
 
         for page in pages_names:
@@ -296,39 +269,39 @@ class PostsViewsTests(TestCase):
                 response = self.auth_client.get(page)
                 context_post = response.context['page_obj'][0]
 
-                self.assertEqual(context_post, post)
+                self.assertEqual(context_post, self.post)
 
     def test_post_correct_not_appear(self):
         ("""Проверка, что созданный пост не появляется в группе """
          """к которой он не принадлежит.""")
-        group2 = PostsViewsTests.group2
-        post = PostsViewsTests.post
-        page = reverse('posts:group_posts', kwargs={'slug': group2.slug})
+
+        page = reverse('posts:group_posts', kwargs={'slug': self.group2.slug})
 
         response = self.auth_client.get(page)
         context_post = response.context['page_obj'][0]
 
-        self.assertNotEqual(context_post, post)
+        self.assertNotEqual(context_post, self.post)
 
     def test_comment_correct_appear(self):
         ("""Проверка, что созданный комментарий появляется на """
          """странице с постом.""")
-        post = PostsViewsTests.post
-        comment = PostsViewsTests.comment
 
         response = self.auth_client.get(
-            reverse('posts:post_detail', kwargs={'post_id': post.pk})
+            reverse('posts:post_detail', kwargs={'post_id': self.post.pk})
         )
 
         context_comment = response.context['comments'][0]
 
-        self.assertEqual(context_comment, comment)
+        self.assertEqual(context_comment, self.comment)
 
     def test_guest_cant_create_comment(self):
         """Проверка, что гость не может создать комментарий."""
-        post = PostsViewsTests.post
+
         comments_count = Comment.objects.count()
-        address = reverse('posts:add_comment', kwargs={'post_id': post.pk})
+        address = reverse(
+            'posts:add_comment',
+            kwargs={'post_id': self.post.pk}
+        )
 
         response = self.guest_client.post(address, follow=True)
 
@@ -340,60 +313,60 @@ class PostsViewsTests(TestCase):
 
     def test_users_correct_following(self):
         """Проверяем возможность подписки пользователей на авторов."""
-        user = PostsViewsTests.user
-        user_not_author = PostsViewsTests.user_2
+
         address = reverse(
             'posts:profile_follow',
-            kwargs={'username': user.username}
+            kwargs={'username': self.user.username}
         )
 
         self.assertFalse(
             Follow.objects.filter(
-                user=user_not_author,
-                author=user,
+                user=self.user_not_author,
+                author=self.user,
             ).exists(),
         )
 
-        self.auth_client_2.get(address)
+        self.auth_client_not_author.get(address)
 
         self.assertTrue(
             Follow.objects.filter(
-                user=user_not_author,
-                author=user,
+                user=self.user_not_author,
+                author=self.user,
             ).exists(),
         )
 
     def test_users_correct_unfollowing(self):
         """Проверяем возможность отписки пользователей от авторов."""
-        user = PostsViewsTests.user
-        user_not_author = PostsViewsTests.user_2
+
         address = reverse(
             'posts:profile_unfollow',
-            kwargs={'username': user.username}
+            kwargs={'username': self.user.username}
         )
+
         Follow.objects.create(
-            user=self.user_2,
+            user=self.user_not_author,
             author=self.user,
         )
 
         self.assertTrue(
             Follow.objects.filter(
-                user=user_not_author,
-                author=user,
+                user=self.user_not_author,
+                author=self.user,
             ).exists(),
         )
 
-        self.auth_client_2.get(address)
+        self.auth_client_not_author.get(address)
 
         self.assertFalse(
             Follow.objects.filter(
-                user=user_not_author,
-                author=user,
+                user=self.user_not_author,
+                author=self.user,
             ).exists(),
         )
 
     def test_index_page_caching(self):
         """Проверка кеширования шаблона index."""
+
         post = Post.objects.create(
             author=self.user,
             group=self.group,
@@ -412,28 +385,28 @@ class PostsViewsTests(TestCase):
     def test_post_correct_appear_at_follow_index(self):
         ("""Проверка, что созданный пост появляется на странице избранных """
          """авторов у подписчиков.""")
-        post = PostsViewsTests.post
+
         Follow.objects.create(
-            user=self.user_2,
+            user=self.user_not_author,
             author=self.user,
         )
 
-        response = self.auth_client_2.get(
+        response = self.auth_client_not_author.get(
             reverse('posts:follow_index')
         )
 
         context_post = response.context['page_obj'][0]
 
-        self.assertEqual(post, context_post)
+        self.assertEqual(context_post, self.post)
 
     def test_post_correct_not_appear_at_follow_index(self):
         ("""Проверка, что созданный пост не появляется на странице избранных"""
          """авторов у тех, кто не подписан.""")
-        post = PostsViewsTests.post
+
         response = self.auth_client.get(
             reverse('posts:follow_index')
         )
 
         context_posts = response.context['page_obj']
 
-        self.assertNotIn(post, context_posts)
+        self.assertNotIn(self.post, context_posts)
